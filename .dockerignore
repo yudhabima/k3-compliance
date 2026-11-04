@@ -1,0 +1,44 @@
+# Version Control
+.git
+.github
+
+# Environment & Secret Files (PENTING: Jangan upload kredensial)
+.env
+.env.*
+!.env.example
+
+# Database Lokal (PENTING: Jangan sertakan SQLite lokal)
+database/*.sqlite
+database/*.sqlite*
+database/database.sqlite
+
+# Dependencies (Akan diinstal segar di dalam container)
+/vendor
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# Storage Runtime & Backup
+storage/backup_original
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+storage/*.key
+storage/pail
+
+# Testing & Cache
+.phpunit.cache
+.phpunit.result.cache
+tests
+
+# IDE & Editor Configs
+.idea
+.vscode
+.fleet
+.nova
+.zed
+
+# Docker & Deployment Files
+.dockerignore
