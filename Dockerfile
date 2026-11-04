@@ -1,15 +1,31 @@
-# ==============================================================================
-# Dockerfile: Laravel 12 K3 Compliance dengan FrankenPHP (Alpine)
-# PHP Version: 8.2 (Kompatibel dengan composer.json ^8.2)
-# ==============================================================================
+# ============================================================
+# Laravel 12 K3 Compliance - FrankenPHP + Vite
+# PHP 8.2 | Node.js 22 | PostgreSQL
+# ============================================================
 
+# STAGE 1: BUILD FRONTEND
+FROM node:22-alpine AS frontend
+
+WORKDIR /app
+
+COPY package.json ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+
+# STAGE 2: LARAVEL + FRANKENPHP
 FROM dunglas/frankenphp:1-php8.2-alpine AS runner
 
-# Label metadata
 LABEL maintainer="K3 Compliance Team"
-LABEL description="Laravel 12 K3 Compliance SaaS with FrankenPHP on Alpine Linux"
+LABEL description="Laravel 12 K3 Compliance with FrankenPHP"
 
-# 1. Install ekstensi PHP yang diperlukan (termasuk pdo_pgsql & pgsql untuk PostgreSQL)
+WORKDIR /app
+
+# Install PHP extensions
 RUN install-php-extensions \
     pdo_pgsql \
     pgsql \
@@ -21,22 +37,18 @@ RUN install-php-extensions \
     intl \
     pcntl
 
-# 2. Salin binary Composer resmi
+# Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# 3. Tentukan direktori kerja aplikasi
-WORKDIR /app
-
-# 4. Set environment default untuk runtime
+# Production environment
 ENV APP_ENV=production \
     APP_DEBUG=false \
     PORT=80 \
     SERVER_NAME=":80"
 
-# 5. Salin composer.json dan composer.lock terlebih dahulu (memanfaatkan Docker cache layer)
+# Install Laravel dependencies
 COPY composer.json composer.lock ./
 
-# 6. Install dependensi composer untuk production (tanpa dev & script)
 RUN composer install \
     --no-dev \
     --no-interaction \
@@ -44,28 +56,32 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-# 7. Salin seluruh source code proyek (file rahasia & SQLite dikecualikan lewat .dockerignore)
+# Copy Laravel source code
 COPY . .
 
-# 8. Jalankan dump-autoload dan package discovery untuk production
-RUN composer dump-autoload --optimize --no-dev \
+# Copy compiled frontend assets
+COPY --from=frontend /app/public/build ./public/build
+
+# Optimize Composer and discover Laravel packages
+RUN composer dump-autoload --optimize --no-dev --no-scripts \
     && php artisan package:discover --ansi
 
-# 9. Salin konfigurasi Caddyfile ke direktori Caddy
+# Copy Caddy configuration
 COPY Caddyfile /etc/caddy/Caddyfile
 
-# 10. Siapkan direktori storage & bootstrap/cache serta beri hak akses penuh
+# Prepare Laravel writable directories
 RUN mkdir -p \
     storage/framework/cache/data \
     storage/framework/sessions \
-    storage/framework/testing \
     storage/framework/views \
+    storage/framework/testing \
     storage/logs \
     bootstrap/cache \
-    && chmod -R 777 storage bootstrap/cache
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# 11. Expose port (Vercel otomatis menghubungkan port ini melalui env $PORT)
+# Expose application port
 EXPOSE 80
 
-# 12. Jalankan FrankenPHP dengan Caddyfile yang telah dikonfigurasi
+# Start FrankenPHP
 CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]

@@ -1,23 +1,16 @@
+
 {
-    # Global FrankenPHP configuration
     frankenphp
 }
 
 :{$PORT:80} {
-    # Document root mengarah ke direktori public Laravel
+    # Document root Laravel
     root * /app/public
 
-    # Aktifkan kompresi modern
+    # Kompresi
     encode zstd gzip
 
-    # Header cache untuk file statis (CSS, JS, Favicon, Fonts)
-    @static {
-        file
-        path *.ico *.css *.js *.svg *.woff *.woff2 *.png *.jpg *.jpeg
-    }
-    header @static Cache-Control "public, max-age=31536000, must-revalidate"
-
-    # Jalankan PHP engine FrankenPHP dan arahkan route yang tidak ada file statisnya ke index.php
+    # Routing Laravel
     php_server {
         try_files {path} /index.php
     }
